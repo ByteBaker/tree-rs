@@ -30,6 +30,7 @@ fn test_iterator_with_empty_directory() {
     let config = FileIteratorConfig {
         show_hidden: false,
         show_only_dirs: false,
+        follow_symlinks: false,
         max_level: usize::MAX,
         include_globs: Arc::new([]),
         exclude_globs: Arc::new([]),
@@ -65,6 +66,7 @@ fn test_unreadable_directory() {
     let config = FileIteratorConfig {
         show_hidden: false,
         show_only_dirs: false,
+        follow_symlinks: false,
         max_level: usize::MAX,
         include_globs: Arc::new([]),
         exclude_globs: Arc::new([]),
@@ -87,6 +89,7 @@ fn test_iterator_max_level_zero() {
     let config = FileIteratorConfig {
         show_hidden: false,
         show_only_dirs: false,
+        follow_symlinks: false,
         max_level: 0,
         include_globs: Arc::new([]),
         exclude_globs: Arc::new([]),
@@ -114,6 +117,7 @@ fn test_iterator_with_hidden_files() {
     let config = FileIteratorConfig {
         show_hidden: false,
         show_only_dirs: false,
+        follow_symlinks: false,
         max_level: usize::MAX,
         include_globs: Arc::new([]),
         exclude_globs: Arc::new([]),
@@ -127,6 +131,7 @@ fn test_iterator_with_hidden_files() {
     let config_with_hidden = FileIteratorConfig {
         show_hidden: true,
         show_only_dirs: false,
+        follow_symlinks: false,
         max_level: usize::MAX,
         include_globs: Arc::new([]),
         exclude_globs: Arc::new([]),
