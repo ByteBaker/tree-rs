@@ -5,56 +5,30 @@ use globset::Glob;
 use std::path::Path;
 use std::sync::Arc;
 
-// Tests for Config::try_from conversion
-
-#[test]
-fn test_config_from_args_basic() {
-    use clap::Parser;
-
-    #[allow(clippy::struct_excessive_bools)]
-    #[derive(Debug, Parser)]
-    struct Args {
-        #[clap(short = 'a', long = "all")]
-        show_all: bool,
-        #[clap(short = 'C')]
-        color_on: bool,
-        #[clap(short = 'n')]
-        color_off: bool,
-        #[clap(value_name = "DIR", default_value = ".")]
-        dir: String,
-        #[clap(short = 'P')]
-        include_pattern: Vec<String>,
-        #[clap(short = 'I')]
-        exclude_pattern: Vec<String>,
-        #[clap(short = 'L', long = "level", default_value_t = usize::max_value())]
-        max_level: usize,
-        #[clap(short = 'd', default_value = "false")]
-        only_dirs: bool,
-        #[clap(short = 'l')]
-        follow_symlinks: bool,
-    }
-
-    let args = Args {
-        show_all: true,
+fn default_args() -> Args {
+    Args {
+        show_all: false,
         color_on: false,
-        color_off: false,
+        color_off: true,
         dir: ".".to_string(),
         include_pattern: vec![],
         exclude_pattern: vec![],
         max_level: usize::MAX,
         only_dirs: false,
         follow_symlinks: false,
+    }
+}
+
+// Tests for Config::try_from conversion
+
+#[test]
+fn test_config_from_args_basic() {
+    let args = Args {
+        show_all: true,
+        ..default_args()
     };
 
-    let config = Config {
-        use_color: false,
-        show_hidden: args.show_all,
-        show_only_dirs: args.only_dirs,
-        follow_symlinks: args.follow_symlinks,
-        max_level: args.max_level,
-        include_globs: Arc::new([]),
-        exclude_globs: Arc::new([]),
-    };
+    let config = Config::try_from(&args).unwrap();
 
     assert!(config.show_hidden);
     assert!(!config.show_only_dirs);
@@ -66,12 +40,7 @@ fn test_config_from_args_basic() {
 fn test_config_color_on() {
     let config = Config {
         use_color: true,
-        show_hidden: false,
-        show_only_dirs: false,
-        follow_symlinks: false,
-        max_level: usize::MAX,
-        include_globs: Arc::new([]),
-        exclude_globs: Arc::new([]),
+        ..Default::default()
     };
 
     assert!(config.use_color);
@@ -79,15 +48,7 @@ fn test_config_color_on() {
 
 #[test]
 fn test_config_color_off() {
-    let config = Config {
-        use_color: false,
-        show_hidden: false,
-        show_only_dirs: false,
-        follow_symlinks: false,
-        max_level: usize::MAX,
-        include_globs: Arc::new([]),
-        exclude_globs: Arc::new([]),
-    };
+    let config = Config::default();
 
     assert!(!config.use_color);
 }
@@ -100,13 +61,8 @@ fn test_config_with_include_patterns() {
     ];
 
     let config = Config {
-        use_color: false,
-        show_hidden: false,
-        show_only_dirs: false,
-        follow_symlinks: false,
-        max_level: usize::MAX,
         include_globs: Arc::from(include_globs),
-        exclude_globs: Arc::new([]),
+        ..Default::default()
     };
 
     assert_eq!(config.include_globs.len(), 2);
@@ -120,13 +76,8 @@ fn test_config_with_exclude_patterns() {
     ];
 
     let config = Config {
-        use_color: false,
-        show_hidden: false,
-        show_only_dirs: false,
-        follow_symlinks: false,
-        max_level: usize::MAX,
-        include_globs: Arc::new([]),
         exclude_globs: Arc::from(exclude_globs),
+        ..Default::default()
     };
 
     assert_eq!(config.exclude_globs.len(), 2);
@@ -135,13 +86,8 @@ fn test_config_with_exclude_patterns() {
 #[test]
 fn test_config_with_max_level() {
     let config = Config {
-        use_color: false,
-        show_hidden: false,
-        show_only_dirs: false,
-        follow_symlinks: false,
         max_level: 3,
-        include_globs: Arc::new([]),
-        exclude_globs: Arc::new([]),
+        ..Default::default()
     };
 
     assert_eq!(config.max_level, 3);
@@ -150,13 +96,8 @@ fn test_config_with_max_level() {
 #[test]
 fn test_config_only_dirs() {
     let config = Config {
-        use_color: false,
-        show_hidden: false,
         show_only_dirs: true,
-        follow_symlinks: false,
-        max_level: usize::MAX,
-        include_globs: Arc::new([]),
-        exclude_globs: Arc::new([]),
+        ..Default::default()
     };
 
     assert!(config.show_only_dirs);
@@ -207,17 +148,7 @@ fn test_config_all_options_enabled() {
 
 #[test]
 fn test_args_to_config_basic() {
-    let args = Args {
-        show_all: false,
-        color_on: false,
-        color_off: true,
-        dir: ".".to_string(),
-        include_pattern: vec![],
-        exclude_pattern: vec![],
-        max_level: usize::MAX,
-        only_dirs: false,
-        follow_symlinks: false,
-    };
+    let args = default_args();
 
     let config = Config::try_from(&args).unwrap();
 
@@ -231,15 +162,9 @@ fn test_args_to_config_basic() {
 #[test]
 fn test_args_to_config_with_color_on() {
     let args = Args {
-        show_all: false,
         color_on: true,
         color_off: false,
-        dir: ".".to_string(),
-        include_pattern: vec![],
-        exclude_pattern: vec![],
-        max_level: usize::MAX,
-        only_dirs: false,
-        follow_symlinks: false,
+        ..default_args()
     };
 
     let config = Config::try_from(&args).unwrap();
@@ -249,17 +174,7 @@ fn test_args_to_config_with_color_on() {
 
 #[test]
 fn test_args_to_config_with_color_off() {
-    let args = Args {
-        show_all: false,
-        color_on: false,
-        color_off: true,
-        dir: ".".to_string(),
-        include_pattern: vec![],
-        exclude_pattern: vec![],
-        max_level: usize::MAX,
-        only_dirs: false,
-        follow_symlinks: false,
-    };
+    let args = default_args();
 
     let config = Config::try_from(&args).unwrap();
 
@@ -270,14 +185,7 @@ fn test_args_to_config_with_color_off() {
 fn test_args_to_config_with_show_all() {
     let args = Args {
         show_all: true,
-        color_on: false,
-        color_off: true,
-        dir: ".".to_string(),
-        include_pattern: vec![],
-        exclude_pattern: vec![],
-        max_level: usize::MAX,
-        only_dirs: false,
-        follow_symlinks: false,
+        ..default_args()
     };
 
     let config = Config::try_from(&args).unwrap();
@@ -288,15 +196,8 @@ fn test_args_to_config_with_show_all() {
 #[test]
 fn test_args_to_config_with_only_dirs() {
     let args = Args {
-        show_all: false,
-        color_on: false,
-        color_off: true,
-        dir: ".".to_string(),
-        include_pattern: vec![],
-        exclude_pattern: vec![],
-        max_level: usize::MAX,
         only_dirs: true,
-        follow_symlinks: false,
+        ..default_args()
     };
 
     let config = Config::try_from(&args).unwrap();
@@ -307,15 +208,8 @@ fn test_args_to_config_with_only_dirs() {
 #[test]
 fn test_args_to_config_with_follow_symlinks() {
     let args = Args {
-        show_all: false,
-        color_on: false,
-        color_off: true,
-        dir: ".".to_string(),
-        include_pattern: vec![],
-        exclude_pattern: vec![],
-        max_level: usize::MAX,
-        only_dirs: false,
         follow_symlinks: true,
+        ..default_args()
     };
 
     let config = Config::try_from(&args).unwrap();
@@ -326,15 +220,8 @@ fn test_args_to_config_with_follow_symlinks() {
 #[test]
 fn test_args_to_config_with_max_level() {
     let args = Args {
-        show_all: false,
-        color_on: false,
-        color_off: true,
-        dir: ".".to_string(),
-        include_pattern: vec![],
-        exclude_pattern: vec![],
         max_level: 3,
-        only_dirs: false,
-        follow_symlinks: false,
+        ..default_args()
     };
 
     let config = Config::try_from(&args).unwrap();
@@ -345,15 +232,8 @@ fn test_args_to_config_with_max_level() {
 #[test]
 fn test_args_to_config_with_include_patterns() {
     let args = Args {
-        show_all: false,
-        color_on: false,
-        color_off: true,
-        dir: ".".to_string(),
         include_pattern: vec!["*.txt".to_string(), "*.md".to_string()],
-        exclude_pattern: vec![],
-        max_level: usize::MAX,
-        only_dirs: false,
-        follow_symlinks: false,
+        ..default_args()
     };
 
     let config = Config::try_from(&args).unwrap();
@@ -364,15 +244,8 @@ fn test_args_to_config_with_include_patterns() {
 #[test]
 fn test_args_to_config_with_exclude_patterns() {
     let args = Args {
-        show_all: false,
-        color_on: false,
-        color_off: true,
-        dir: ".".to_string(),
-        include_pattern: vec![],
         exclude_pattern: vec!["*.log".to_string(), "*.tmp".to_string()],
-        max_level: usize::MAX,
-        only_dirs: false,
-        follow_symlinks: false,
+        ..default_args()
     };
 
     let config = Config::try_from(&args).unwrap();
@@ -383,15 +256,8 @@ fn test_args_to_config_with_exclude_patterns() {
 #[test]
 fn test_args_to_config_with_invalid_include_pattern() {
     let args = Args {
-        show_all: false,
-        color_on: false,
-        color_off: true,
-        dir: ".".to_string(),
         include_pattern: vec!["[invalid".to_string()],
-        exclude_pattern: vec![],
-        max_level: usize::MAX,
-        only_dirs: false,
-        follow_symlinks: false,
+        ..default_args()
     };
 
     let result = Config::try_from(&args);
@@ -403,15 +269,8 @@ fn test_args_to_config_with_invalid_include_pattern() {
 #[test]
 fn test_args_to_config_with_invalid_exclude_pattern() {
     let args = Args {
-        show_all: false,
-        color_on: false,
-        color_off: true,
-        dir: ".".to_string(),
-        include_pattern: vec![],
         exclude_pattern: vec!["[invalid".to_string()],
-        max_level: usize::MAX,
-        only_dirs: false,
-        follow_symlinks: false,
+        ..default_args()
     };
 
     let result = Config::try_from(&args);
